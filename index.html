@@ -8,6 +8,7 @@
   <title>Domain Checker</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
+  <script src="scanner.js" defer></script>
 </head>
 <body>
   <main class="container">
@@ -16,9 +17,30 @@
 
     <section class="search-box">
       <label for="domain">Domain name</label>
-      <input id="domain" placeholder="google"
-        autocomplete="off" autocapitalize="off"
-        spellcheck="false">
+      <input
+        id="domain"
+        placeholder="apple"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
+
+      <label>Choose a character to replace</label>
+      <div
+        id="character-selector"
+        class="character-selector"
+        aria-label="Select a character to replace"
+      >
+        <p class="selector-hint">
+          Enter a domain name to select a character.
+        </p>
+      </div>
+
+      <button id="scan-button" type="button" disabled>
+        Auto Check 36
+      </button>
+
+      <div id="scan-progress" class="scan-progress" aria-live="polite"></div>
 
       <label for="extension">Domain extension</label>
       <select id="extension">
@@ -49,10 +71,23 @@
         DNS check only. Results are not conclusive.
       </div>
 
-      <div id="status" class="status muted"
-        role="status" aria-live="polite">
+      <div
+        id="status"
+        class="status muted"
+        role="status"
+        aria-live="polite"
+      >
         Enter a domain name to start checking.
       </div>
+    </section>
+
+    <!-- Scanner results appear here -->
+    <section
+      id="scan-results-container"
+      class="scan-results-container"
+      aria-label="Bulk scan results"
+    >
+      <div id="scan-results" class="scan-results"></div>
     </section>
 
     <p class="note">
