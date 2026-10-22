@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0d12">
   <title>Domain Checker</title>
   <link rel="stylesheet" href="style.css">
@@ -12,40 +12,37 @@
 <body>
   <main class="container">
     <h1>Domain<span>Checker</span></h1>
-    <p class="subtitle">Check domains in real time.</p>
+    <p class="subtitle">Check domain availability instantly.</p>
 
     <section class="search-box">
       <label for="domain">Domain name</label>
-      <input id="domain" type="text"
-        placeholder="example" autocomplete="off"
-        spellcheck="false">
+      <input
+        id="domain"
+        type="text"
+        placeholder="example"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
 
-      <label for="extension">Extension</label>
-      <input id="extension" type="text"
-        placeholder=".it" autocomplete="off"
-        spellcheck="false">
+      <label for="extension">Domain extension</label>
+      <input
+        id="extension"
+        type="text"
+        placeholder=".it"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
 
       <div id="status" class="status" aria-live="polite">
         Enter a domain to start checking.
       </div>
     </section>
 
-    <section id="preview-section" hidden>
-      <h2 id="preview-title">Website preview</h2>
-      <div class="preview">
-        <iframe id="preview" title="Website preview"
-          sandbox="allow-scripts allow-forms allow-same-origin"
-          loading="lazy"></iframe>
-      </div>
-      <a id="open-site" target="_blank"
-        rel="noopener noreferrer" hidden>
-        Open in New Tab ↗
-      </a>
-    </section>
-
     <p class="note">
-      Results depend on external services. Website previews
-      may be blocked by the website owner.
+      Availability is indicative. Confirm with the relevant
+      domain registrar before purchasing.
     </p>
   </main>
 </body>
