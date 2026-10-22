@@ -5,95 +5,76 @@ const statusBox = document.getElementById("status");
 
 let timer;
 let requestId = 0;
-let bootstrapPromise;
 
 function showStatus(message, type = "muted") {
   statusBox.className = `status ${type}`;
   statusBox.textContent = message;
 }
 
-function getDomain() {
+function normalizeDomain() {
   const name = domainInput.value.trim().toLowerCase();
   const extension = extensionInput.value
-    .trim().replace(/^\.+/, "").toLowerCase();
+    .trim()
+    .replace(/^\.+/, "")
+    .toLowerCase();
 
   if (!name || !extension) return null;
 
-  const labels = `${name}.${extension}`.split(".");
+  const domain = `${name}.${extension}`;
+  const labels = domain.split(".");
   const validLabel =
     /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-  if (labels.some(label => !validLabel.test(label))) return null;
-  if (labels.join(".").length > 253) return null;
-
-  return labels.join(".");
-}
-
-async function getRdapServer(tld) {
-  if (!bootstrapPromise) {
-    bootstrapPromise = fetch("https://data.iana.org/rdap/dns.json")
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Registry list HTTP ${response.status}`);
-        }
-        return response.json();
-      });
+  if (
+    labels.some(label => !validLabel.test(label)) ||
+    domain.length > 253
+  ) {
+    return null;
   }
 
-  const data = await bootstrapPromise;
-  const service = data.services.find(
-    item => item[0].some(value => value.toLowerCase() === tld)
-  );
-
-  if (!service || !service[1]?.length) {
-    throw new Error(`No RDAP registry found for .${tld}`);
-  }
-
-  return service[1][0].replace(/\/+$/, "");
+  return domain;
 }
 
 async function checkDomain(domain, id) {
-  showStatus("Checking domain...");
+  showStatus("Checking domain registration...");
 
   try {
-    const tld = domain.split(".").pop();
-    const server = await getRdapServer(tld);
-
-    if (id !== requestId) return;
-
     const response = await fetch(
-      `${server}/domain/${encodeURIComponent(domain)}`
+      `https://rdap.org/domain/${encodeURIComponent(domain)}`
     );
 
     if (id !== requestId) return;
 
     if (response.status === 404) {
       showStatus(
-        "🟢 Domain not found in registry. Check registrar to confirm availability.",
+        "🟢 Domain not found. Confirm availability with a registrar.",
         "ok"
       );
       return;
     }
 
     if (!response.ok) {
-      throw new Error(`Registry HTTP ${response.status}`);
+      throw new Error(`RDAP request failed (${response.status})`);
     }
 
     const data = await response.json();
 
+    if (id !== requestId) return;
+
     if (data.objectClassName !== "domain") {
-      throw new Error("Unexpected registry response");
+      throw new Error("Unexpected response from registry");
     }
 
     showStatus("✅ Domain is registered.", "bad");
+
   } catch (error) {
     if (id !== requestId) return;
 
     console.error("Domain check error:", error);
 
     showStatus(
-      `Unable to verify: ${error.message}. Try again later.`,
-      "bad"
+      `Unable to verify: ${error.message}`,
+      "muted"
     );
   }
 }
@@ -101,7 +82,7 @@ async function checkDomain(domain, id) {
 function handleInput() {
   clearTimeout(timer);
   const id = ++requestId;
-  const domain = getDomain();
+  const domain = normalizeDomain();
 
   if (!domain) {
     showStatus("Enter a valid domain and extension.");
