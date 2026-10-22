@@ -15,9 +15,7 @@ function showStatus(message, type = "muted") {
 function getDomain() {
   const name = domainInput.value.trim().toLowerCase();
   const extension = extensionInput.value
-    .trim()
-    .replace(/^\.+/, "")
-    .toLowerCase();
+    .trim().replace(/^\.+/, "").toLowerCase();
 
   if (!name || !extension) return null;
 
@@ -25,12 +23,8 @@ function getDomain() {
   const validLabel =
     /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-  if (
-    labels.some(label => !validLabel.test(label)) ||
-    labels.join(".").length > 253
-  ) {
-    return null;
-  }
+  if (labels.some(label => !validLabel.test(label))) return null;
+  if (labels.join(".").length > 253) return null;
 
   return labels.join(".");
 }
@@ -39,26 +33,27 @@ async function getRdapServer(tld) {
   if (!bootstrapPromise) {
     bootstrapPromise = fetch("https://data.iana.org/rdap/dns.json")
       .then(response => {
-        if (!response.ok) throw new Error("Registry list unavailable");
+        if (!response.ok) {
+          throw new Error(`Registry list HTTP ${response.status}`);
+        }
         return response.json();
       });
   }
 
   const data = await bootstrapPromise;
-
   const service = data.services.find(
-    item => item[0].some(t => t.toLowerCase() === tld)
+    item => item[0].some(value => value.toLowerCase() === tld)
   );
 
   if (!service || !service[1]?.length) {
-    throw new Error("This extension is not supported by RDAP");
+    throw new Error(`No RDAP registry found for .${tld}`);
   }
 
   return service[1][0].replace(/\/+$/, "");
 }
 
 async function checkDomain(domain, id) {
-  showStatus("Checking domain registration...");
+  showStatus("Checking domain...");
 
   try {
     const tld = domain.split(".").pop();
@@ -74,14 +69,14 @@ async function checkDomain(domain, id) {
 
     if (response.status === 404) {
       showStatus(
-        "🟢 Likely available — confirm with a registrar.",
+        "🟢 Domain not found in registry. Check registrar to confirm availability.",
         "ok"
       );
       return;
     }
 
     if (!response.ok) {
-      throw new Error("Registry could not confirm the status");
+      throw new Error(`Registry HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -90,13 +85,15 @@ async function checkDomain(domain, id) {
       throw new Error("Unexpected registry response");
     }
 
-    showStatus("✅ Domain registered.", "bad");
+    showStatus("✅ Domain is registered.", "bad");
   } catch (error) {
     if (id !== requestId) return;
 
+    console.error("Domain check error:", error);
+
     showStatus(
-      "⚠️ Unable to verify. Try again later or check a registrar.",
-      "muted"
+      `Unable to verify: ${error.message}. Try again later.`,
+      "bad"
     );
   }
 }
@@ -117,14 +114,3 @@ function handleInput() {
 
 domainInput.addEventListener("input", handleInput);
 extensionInput.addEventListener("input", handleInput);
-
-
-} catch (error) {
-  if (id !== requestId) return;
-
-  console.error("Domain check error:", error);
-  showStatus(
-    `Error: ${error.message}`,
-    "bad"
-  );
-}
