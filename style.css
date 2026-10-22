@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
 }
@@ -46,7 +47,8 @@ label {
   font-size: 14px;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 48px;
   margin-bottom: 20px;
@@ -59,8 +61,20 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: #60a5fa;
+}
+
+select {
+  cursor: pointer;
+}
+
+.method {
+  margin: -5px 0 16px;
+  color: #60a5fa;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .status {
@@ -82,6 +96,11 @@ input:focus {
 }
 
 @media (max-width: 480px) {
-  .container { padding-top: 35px; }
-  .search-box { padding: 16px; }
+  .container {
+    padding-top: 35px;
+  }
+
+  .search-box {
+    padding: 16px;
+  }
 }
