@@ -117,3 +117,14 @@ function handleInput() {
 
 domainInput.addEventListener("input", handleInput);
 extensionInput.addEventListener("input", handleInput);
+
+
+} catch (error) {
+  if (id !== requestId) return;
+
+  console.error("Domain check error:", error);
+  showStatus(
+    `Error: ${error.message}`,
+    "bad"
+  );
+}
