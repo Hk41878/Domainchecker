@@ -25,20 +25,30 @@
         spellcheck="false"
       >
 
-      <label>Choose a character to replace</label>
+      <label>Choose character positions to replace</label>
       <div
         id="character-selector"
         class="character-selector"
-        aria-label="Select a character to replace"
+        aria-label="Select character positions"
       >
-        <p class="selector-hint">
-          Enter a domain name to select a character.
-        </p>
+        <p class="selector-hint">Enter a domain name to select characters.</p>
       </div>
 
-      <button id="scan-button" type="button" disabled>
-        Auto Check 36
-      </button>
+      <div class="scan-controls">
+        <label class="scan-option">
+          <input type="checkbox" id="include-letters" checked>
+          a–z
+        </label>
+
+        <label class="scan-option">
+          <input type="checkbox" id="include-numbers">
+          0–9
+        </label>
+
+        <button id="scan-button" type="button" disabled>
+          Auto Check 0
+        </button>
+      </div>
 
       <div id="scan-progress" class="scan-progress" aria-live="polite"></div>
 
@@ -81,12 +91,39 @@
       </div>
     </section>
 
-    <!-- Scanner results appear here -->
     <section
       id="scan-results-container"
       class="scan-results-container"
       aria-label="Bulk scan results"
     >
+      <div class="sort-controls">
+        <span class="sort-label">Sort:</span>
+
+        <button type="button" class="sort-button" data-sort="🍀"
+          aria-pressed="false" aria-label="Sort lucky results first">🍀</button>
+
+        <button type="button" class="sort-button" data-sort="🟡"
+          aria-pressed="false" aria-label="Sort yellow results first">🟡</button>
+
+        <button type="button" class="sort-button" data-sort="❌"
+          aria-pressed="false" aria-label="Sort red results first">❌</button>
+
+        <button
+          type="button"
+          id="sort-info-button"
+          class="sort-info-button"
+          aria-label="Explain result symbols"
+          aria-expanded="false"
+        >(i)</button>
+      </div>
+
+      <div id="sort-info" class="sort-info" hidden>
+        <p>🍀 DNS records not found and RDAP reports no domain record. Availability is not guaranteed.</p>
+        <p>🟡 No DNS records found. This is a DNS-only result for .IT domains.</p>
+        <p>❌ DNS records found or RDAP reports the domain as registered.</p>
+        <p>⚪ Unable to verify — the lookup service may have failed.</p>
+      </div>
+
       <div id="scan-results" class="scan-results"></div>
     </section>
 
