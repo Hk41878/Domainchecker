@@ -2,124 +2,101 @@
 const domainInput = document.getElementById("domain");
 const extensionInput = document.getElementById("extension");
 const statusBox = document.getElementById("status");
-const previewSection = document.getElementById("preview-section");
-const preview = document.getElementById("preview");
-const openSite = document.getElementById("open-site");
 
 let timer;
 let requestId = 0;
+let bootstrapPromise;
 
 function showStatus(message, type = "muted") {
   statusBox.className = `status ${type}`;
-  statusBox.replaceChildren();
-
-  const line = document.createElement("div");
-  line.textContent = message;
-  statusBox.appendChild(line);
+  statusBox.textContent = message;
 }
 
-function normalizeDomain() {
-  const name = domainInput.value.trim();
-  let extension = extensionInput.value.trim();
+function getDomain() {
+  const name = domainInput.value.trim().toLowerCase();
+  const extension = extensionInput.value
+    .trim()
+    .replace(/^\.+/, "")
+    .toLowerCase();
 
   if (!name || !extension) return null;
 
-  extension = extension.replace(/^\.+/, "");
+  const labels = `${name}.${extension}`.split(".");
+  const validLabel =
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
   if (
-    !/^[a-z0-9-]+(\.[a-z0-9-]+)*$/i.test(name) ||
-    !/^[a-z0-9-]+(\.[a-z0-9-]+)*$/i.test(extension) ||
-    name.startsWith("-") ||
-    name.endsWith("-")
+    labels.some(label => !validLabel.test(label)) ||
+    labels.join(".").length > 253
   ) {
     return null;
   }
 
-  const fullDomain = `${name}.${extension}`.toLowerCase();
-
-  if (fullDomain.length > 253) return null;
-
-  return fullDomain;
+  return labels.join(".");
 }
 
-function renderDomainStatus(domain, registered, site) {
-  statusBox.replaceChildren();
-  statusBox.className = "status";
+async function getRdapServer(tld) {
+  if (!bootstrapPromise) {
+    bootstrapPromise = fetch("https://data.iana.org/rdap/dns.json")
+      .then(response => {
+        if (!response.ok) throw new Error("Registry list unavailable");
+        return response.json();
+      });
+  }
 
-  const domainLine = document.createElement("div");
-  domainLine.textContent =
-    `Domain ${registered ? "✅" : "❌"}`;
+  const data = await bootstrapPromise;
 
-  const siteLine = document.createElement("div");
-  siteLine.textContent =
-    `Site ${site === true ? "✅" :
-      site === false ? "❌" : "— Not verified"}`;
+  const service = data.services.find(
+    item => item[0].some(t => t.toLowerCase() === tld)
+  );
 
-  statusBox.append(domainLine, siteLine);
+  if (!service || !service[1]?.length) {
+    throw new Error("This extension is not supported by RDAP");
+  }
+
+  return service[1][0].replace(/\/+$/, "");
 }
 
 async function checkDomain(domain, id) {
-  showStatus("Checking domain and website...");
+  showStatus("Checking domain registration...");
 
   try {
-    // Public RDAP lookup. A 404 generally means
-    // the domain is not registered.
+    const tld = domain.split(".").pop();
+    const server = await getRdapServer(tld);
+
+    if (id !== requestId) return;
+
     const response = await fetch(
-      `https://rdap.org/domain/${encodeURIComponent(domain)}`
+      `${server}/domain/${encodeURIComponent(domain)}`
     );
 
     if (id !== requestId) return;
 
     if (response.status === 404) {
-      renderDomainStatus(domain, false, null);
-      previewSection.hidden = true;
-      preview.removeAttribute("src");
-      openSite.hidden = true;
+      showStatus(
+        "🟢 Likely available — confirm with a registrar.",
+        "ok"
+      );
       return;
     }
 
     if (!response.ok) {
-      throw new Error("Domain status could not be verified.");
+      throw new Error("Registry could not confirm the status");
     }
 
-    renderDomainStatus(domain, true, null);
+    const data = await response.json();
 
-    const url = `https://${domain}/`;
-
-    openSite.href = url;
-    openSite.hidden = false;
-    previewSection.hidden = false;
-    preview.src = url;
-
-    // Check website metadata using an external service.
-    // This is an indication, not a guarantee of uptime.
-    try {
-      const api =
-        "https://api.microlink.io/?url=" +
-        encodeURIComponent(url);
-
-      const siteResponse = await fetch(api);
-
-      if (!siteResponse.ok) {
-        throw new Error("Site status unknown");
-      }
-
-      const data = await siteResponse.json();
-
-      if (id !== requestId) return;
-
-      const siteAvailable = data.status === "success";
-
-      renderDomainStatus(domain, true, siteAvailable);
-    } catch {
-      if (id !== requestId) return;
-      renderDomainStatus(domain, true, null);
+    if (data.objectClassName !== "domain") {
+      throw new Error("Unexpected registry response");
     }
-  } catch {
+
+    showStatus("✅ Domain registered.", "bad");
+  } catch (error) {
     if (id !== requestId) return;
+
     showStatus(
-      "Unable to verify right now. Please try again.",
-      "bad"
+      "⚠️ Unable to verify. Try again later or check a registrar.",
+      "muted"
     );
   }
 }
@@ -127,17 +104,14 @@ async function checkDomain(domain, id) {
 function handleInput() {
   clearTimeout(timer);
   const id = ++requestId;
-  const domain = normalizeDomain();
+  const domain = getDomain();
 
   if (!domain) {
     showStatus("Enter a valid domain and extension.");
-    previewSection.hidden = true;
-    preview.removeAttribute("src");
-    openSite.hidden = true;
     return;
   }
 
-  showStatus("Waiting for input...");
+  showStatus("Waiting...");
   timer = setTimeout(() => checkDomain(domain, id), 500);
 }
 
