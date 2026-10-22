@@ -7,8 +7,7 @@ const methodBox = document.getElementById("method");
 let timer;
 let requestId = 0;
 
-// These extensions are configured for DNS-only checking.
-// Other listed extensions will attempt an RDAP lookup after DNS is negative.
+// .IT uses DNS-only checking in this version.
 const dnsOnlyExtensions = new Set(["it"]);
 
 function showStatus(message, type = "muted") {
@@ -34,7 +33,7 @@ function getDomain() {
 
   if (!name) return null;
 
-  // Allow users to enter either "example" or "example.com".
+  // Accept either "example" or "example.com".
   const cleanName = name.replace(/\.$/, "");
   const domain = cleanName.includes(".")
     ? cleanName
@@ -132,27 +131,21 @@ async function checkDomain(domain, id) {
       return;
     }
 
-    // DNS positive: do not make an RDAP request.
+    // DNS records found: show only the requested red message.
     if (dns.hasRecords) {
-      showStatus(
-        "DNS records found — likely in use. Registration and availability are not conclusively confirmed.",
-        "warn"
-      );
+      showStatus("❌ DNS record found", "bad");
       return;
     }
 
-    // DNS negative and extension is DNS-only.
+    // No DNS records and this extension is DNS-only.
     const extension = domain.split(".").pop();
 
     if (dnsOnlyExtensions.has(extension)) {
-      showStatus(
-        "No common DNS records found. DNS Check Only — availability is NOT confirmed.",
-        "warn"
-      );
+      showStatus("🟡 No DNS record found", "warn");
       return;
     }
 
-    // DNS negative: attempt RDAP lookup.
+    // No DNS records: attempt RDAP lookup.
     showStatus(
       "No DNS records found. Checking RDAP registration...",
       "muted"
@@ -169,8 +162,8 @@ async function checkDomain(domain, id) {
       );
     } else if (rdapResult === "not-found") {
       showStatus(
-        "No DNS records or RDAP record found. Availability is NOT confirmed; check a registrar.",
-        "warn"
+        "🍀 DNS or RDAP not found. Try your luck on a registrar",
+        "ok"
       );
     } else {
       showStatus(
@@ -182,6 +175,7 @@ async function checkDomain(domain, id) {
     if (id !== requestId) return;
 
     console.error("Domain check error:", error);
+
     showStatus(
       "Unable to verify right now. A lookup service may be unavailable or blocked.",
       "muted"
@@ -191,6 +185,7 @@ async function checkDomain(domain, id) {
 
 function handleInput() {
   clearTimeout(timer);
+
   const id = ++requestId;
   const domain = getDomain();
 
