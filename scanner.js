@@ -6,39 +6,30 @@
   const scanButton = document.getElementById("scan-button");
   const progressBox = document.getElementById("scan-progress");
   const resultsBox = document.getElementById("scan-results");
+  const includeLetters = document.getElementById("include-letters");
+  const includeNumbers = document.getElementById("include-numbers");
+  const sortButtons = [...document.querySelectorAll(".sort-button")];
+  const infoButton = document.getElementById("sort-info-button");
+  const infoBox = document.getElementById("sort-info");
 
-  if (
-    !domainInput ||
-    !extensionSelect ||
-    !characterSelector ||
-    !scanButton ||
-    !progressBox ||
-    !resultsBox
-  ) {
-    console.error("Domain scanner: required HTML elements are missing.");
-    return;
-  }
-
-  const CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const LETTERS = "abcdefghijklmnopqrstuvwxyz";
+  const NUMBERS = "0123456789";
   const DNS_ONLY_EXTENSIONS = new Set(["it"]);
 
-  let selectedIndex = -1;
+  let selectedPositions = new Set();
+  let sortEmoji = null;
   let scanning = false;
-  let scanRunId = 0;
 
   function getBaseName() {
     const input = domainInput.value.trim().toLowerCase();
-
     if (!input) return "";
 
-    // If a full domain was entered, remove the selected extension.
-    const selectedSuffix = `.${extensionSelect.value.toLowerCase()}`;
+    const suffix = `.${extensionSelect.value.toLowerCase()}`;
 
-    if (input.endsWith(selectedSuffix)) {
-      return input.slice(0, -selectedSuffix.length);
+    if (input.endsWith(suffix)) {
+      return input.slice(0, -suffix.length);
     }
 
-    // Also support entering a different full domain.
     if (input.includes(".")) {
       return input.split(".")[0];
     }
@@ -54,17 +45,49 @@
     );
   }
 
+  function getCharacters() {
+    let characters = "";
+
+    if (includeLetters.checked) characters += LETTERS;
+    if (includeNumbers.checked) characters += NUMBERS;
+
+    return characters;
+  }
+
+  function getCombinationCount() {
+    const positions = selectedPositions.size;
+    const characters = getCharacters().length;
+
+    if (!positions || !characters) return 0;
+
+    return characters ** positions;
+  }
+
+  function updateScanButton() {
+    const count = getCombinationCount();
+    scanButton.textContent = `Auto Check ${count}`;
+
+    scanButton.disabled =
+      scanning ||
+      count === 0 ||
+      !isValidName(getBaseName());
+  }
+
   function renderCharacterButtons() {
     const name = getBaseName();
     characterSelector.replaceChildren();
-    selectedIndex = -1;
+
+    // Remove selections that no longer exist.
+    selectedPositions = new Set(
+      [...selectedPositions].filter(index => index < name.length)
+    );
 
     if (!name) {
       const hint = document.createElement("p");
       hint.className = "selector-hint";
-      hint.textContent = "Enter a domain name to select a character.";
+      hint.textContent = "Enter a domain name to select characters.";
       characterSelector.appendChild(hint);
-      scanButton.disabled = true;
+      updateScanButton();
       return;
     }
 
@@ -73,32 +96,42 @@
       button.type = "button";
       button.className = "char-button";
       button.textContent = character;
-      button.setAttribute("aria-label", `Select character ${character} at position ${index + 1}`);
-      button.setAttribute("aria-pressed", "false");
+      button.setAttribute(
+        "aria-label",
+        `Select character ${character} at position ${index + 1}`
+      );
+
+      function updateButton() {
+        const selected = selectedPositions.has(index);
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      }
 
       button.addEventListener("click", () => {
         if (scanning) return;
 
-        selectedIndex = index;
+        if (selectedPositions.has(index)) {
+          selectedPositions.delete(index);
+        } else {
+          selectedPositions.add(index);
+        }
 
-        characterSelector
-          .querySelectorAll(".char-button")
-          .forEach((item, itemIndex) => {
-            const selected = itemIndex === index;
-            item.classList.toggle("selected", selected);
-            item.setAttribute("aria-pressed", String(selected));
-          });
+        updateButton();
+        updateScanButton();
 
-        scanButton.disabled = false;
-        progressBox.textContent =
-          `Selected position ${index + 1}. ${CHARACTERS.length} combinations will be checked.`;
+        const count = getCombinationCount();
+
+        progressBox.textContent = count
+          ? `${selectedPositions.size} position(s) selected. ${count} combinations will be checked.`
+          : "Select character positions and a character set.";
       });
 
+      updateButton();
       characterSelector.appendChild(button);
     });
 
-    scanButton.disabled = true;
-    progressBox.textContent = "Select one character to replace.";
+    updateScanButton();
+    progressBox.textContent = "Select one or more character positions.";
   }
 
   async function checkDns(domain) {
@@ -114,9 +147,7 @@
           headers: { Accept: "application/dns-json" }
         });
 
-        if (!response.ok) {
-          throw new Error("DNS lookup failed");
-        }
+        if (!response.ok) throw new Error("DNS lookup failed");
 
         return response.json();
       })
@@ -162,18 +193,14 @@
       const dns = await checkDns(domain);
 
       if (dns.allFailed) return "⚪";
-
-      // DNS records found: red symbol, matching the main checker.
       if (dns.hasRecords) return "❌";
 
       const extension = domain.split(".").pop();
 
-      // .IT uses DNS-only checks.
       if (DNS_ONLY_EXTENSIONS.has(extension)) {
         return "🟡";
       }
 
-      // No DNS records: try RDAP.
       const rdap = await checkRdap(domain);
 
       if (rdap === "registered") return "❌";
@@ -185,9 +212,31 @@
     }
   }
 
-  function addResult(domain, emoji) {
+  function sortResults() {
+    const rows = [...resultsBox.querySelectorAll(".scan-result-row")];
+
+    rows.sort((a, b) => {
+      if (!sortEmoji) {
+        return Number(a.dataset.index) - Number(b.dataset.index);
+      }
+
+      const aMatch = a.dataset.emoji === sortEmoji;
+      const bMatch = b.dataset.emoji === sortEmoji;
+
+      if (aMatch !== bMatch) return aMatch ? -1 : 1;
+
+      // Keep original order within each group.
+      return Number(a.dataset.index) - Number(b.dataset.index);
+    });
+
+    rows.forEach(row => resultsBox.appendChild(row));
+  }
+
+  function addResult(domain, emoji, index) {
     const row = document.createElement("div");
     row.className = "scan-result-row";
+    row.dataset.emoji = emoji;
+    row.dataset.index = String(index);
 
     const domainText = document.createElement("span");
     domainText.className = "scan-result-domain";
@@ -200,6 +249,31 @@
 
     row.append(domainText, icon);
     resultsBox.appendChild(row);
+
+    if (sortEmoji) sortResults();
+  }
+
+  function* generateVariants(name, positions, characters) {
+    const chars = [...name];
+
+    function* build(depth) {
+      if (depth === positions.length) {
+        yield chars.join("");
+        return;
+      }
+
+      const position = positions[depth];
+      const original = chars[position];
+
+      for (const character of characters) {
+        chars[position] = character;
+        yield* build(depth + 1);
+      }
+
+      chars[position] = original;
+    }
+
+    yield* build(0);
   }
 
   async function startScan() {
@@ -207,75 +281,117 @@
 
     const name = getBaseName();
     const extension = extensionSelect.value.toLowerCase();
+    const characters = getCharacters();
+    const positions = [...selectedPositions].sort((a, b) => a - b);
 
     if (!isValidName(name)) {
       progressBox.textContent = "Enter a valid domain name first.";
       return;
     }
 
-    if (selectedIndex < 0 || selectedIndex >= name.length) {
-      progressBox.textContent = "Select one character to replace.";
+    if (!positions.length || !characters.length) {
+      progressBox.textContent =
+        "Select character positions and a–z or 0–9.";
       return;
     }
 
+    const total = characters.length ** positions.length;
+
+    if (total > 10000) {
+      const proceed = window.confirm(
+        `This scan will check ${total.toLocaleString()} domains and may take a long time. Continue?`
+      );
+
+      if (!proceed) return;
+    }
+
     scanning = true;
-    scanButton.disabled = true;
     domainInput.disabled = true;
     extensionSelect.disabled = true;
-    scanRunId += 1;
+    includeLetters.disabled = true;
+    includeNumbers.disabled = true;
 
-    const currentRun = scanRunId;
+    updateScanButton();
+    resultsBox.replaceChildren();
+
     let completed = 0;
 
-    resultsBox.replaceChildren();
-    progressBox.textContent = `Starting scan: 0/${CHARACTERS.length}`;
+    progressBox.textContent = `Starting scan: 0/${total}`;
 
     try {
-      for (const character of CHARACTERS) {
-        if (currentRun !== scanRunId) return;
-
-        const variant =
-          name.slice(0, selectedIndex) +
-          character +
-          name.slice(selectedIndex + 1);
-
+      for (const variant of generateVariants(name, positions, characters)) {
         const domain = `${variant}.${extension}`;
         const emoji = await getDomainEmoji(domain);
 
-        if (currentRun !== scanRunId) return;
+        addResult(domain, emoji, completed);
+        completed++;
 
-        addResult(domain, emoji);
-
-        completed += 1;
         progressBox.textContent =
-          `Checking ${completed}/${CHARACTERS.length} — ${domain}`;
+          `Checking ${completed}/${total} — ${domain}`;
 
-        // Small pause between checks to reduce bursts of requests.
+        // Pause between domains to reduce request bursts.
         await new Promise(resolve => setTimeout(resolve, 150));
       }
 
       progressBox.textContent =
-        `Scan complete: ${completed}/${CHARACTERS.length} domains checked.`;
+        `Scan complete: ${completed}/${total} domains checked.`;
+    } catch (error) {
+      console.error("Scanner error:", error);
+      progressBox.textContent =
+        `Scan stopped after ${completed}/${total} domains.`;
     } finally {
       scanning = false;
       domainInput.disabled = false;
       extensionSelect.disabled = false;
-      scanButton.disabled = selectedIndex < 0;
+      includeLetters.disabled = false;
+      includeNumbers.disabled = false;
+
+      updateScanButton();
     }
   }
 
+  function setSort(emoji) {
+    // Clicking the selected option again resets the order.
+    sortEmoji = sortEmoji === emoji ? null : emoji;
+
+    sortButtons.forEach(button => {
+      const active = button.dataset.sort === sortEmoji;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+
+    sortResults();
+  }
+
+  sortButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      setSort(button.dataset.sort);
+    });
+  });
+
+  infoButton.addEventListener("click", () => {
+    const isHidden = infoBox.hidden;
+    infoBox.hidden = !isHidden;
+    infoButton.setAttribute("aria-expanded", String(isHidden));
+  });
+
   domainInput.addEventListener("input", () => {
     if (scanning) return;
+
+    selectedPositions.clear();
     resultsBox.replaceChildren();
     renderCharacterButtons();
   });
 
   extensionSelect.addEventListener("change", () => {
     if (scanning) return;
+
     resultsBox.replaceChildren();
     renderCharacterButtons();
   });
 
+  includeLetters.addEventListener("change", updateScanButton);
+  includeNumbers.addEventListener("change", updateScanButton);
   scanButton.addEventListener("click", startScan);
 
   renderCharacterButtons();
