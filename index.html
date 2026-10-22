@@ -1,10 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0d12">
-  <meta name="description" content="Check domain registration status.">
   <title>Domain Checker</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
@@ -14,23 +14,49 @@
     <h1>Domain<span>Checker</span></h1>
     <p class="subtitle">Check domain registration status.</p>
 
-    <section class="search-box" aria-label="Domain checker">
+    <section class="search-box">
       <label for="domain">Domain name</label>
-      <input id="domain" placeholder="google" autocomplete="off"
-        autocapitalize="off" spellcheck="false" inputmode="url">
+      <input id="domain" placeholder="google"
+        autocomplete="off" autocapitalize="off"
+        spellcheck="false">
 
       <label for="extension">Domain extension</label>
-      <input id="extension" placeholder=".com" autocomplete="off"
-        autocapitalize="off" spellcheck="false" inputmode="url">
+      <select id="extension">
+        <option value="it">.IT — DNS Check Only</option>
+        <option value="com">.COM — DNS + RDAP Check</option>
+        <option value="net">.NET — DNS + RDAP Check</option>
+        <option value="org">.ORG — DNS + RDAP Check</option>
+        <option value="info">.INFO — DNS + RDAP Check</option>
+        <option value="biz">.BIZ — DNS + RDAP Check</option>
+        <option value="eu">.EU — DNS + RDAP Check</option>
+        <option value="io">.IO — DNS + RDAP Check</option>
+        <option value="co">.CO — DNS + RDAP Check</option>
+        <option value="dev">.DEV — DNS + RDAP Check</option>
+        <option value="app">.APP — DNS + RDAP Check</option>
+        <option value="me">.ME — DNS + RDAP Check</option>
+        <option value="xyz">.XYZ — DNS + RDAP Check</option>
+        <option value="online">.ONLINE — DNS + RDAP Check</option>
+        <option value="site">.SITE — DNS + RDAP Check</option>
+        <option value="store">.STORE — DNS + RDAP Check</option>
+        <option value="tech">.TECH — DNS + RDAP Check</option>
+        <option value="uk">.UK — DNS + RDAP Check</option>
+        <option value="de">.DE — DNS + RDAP Check</option>
+        <option value="fr">.FR — DNS + RDAP Check</option>
+      </select>
 
-      <div id="status" class="status muted" role="status" aria-live="polite">
-        Enter a domain name and extension to start checking.
+      <div id="method" class="method">
+        DNS check only. Results are not conclusive.
+      </div>
+
+      <div id="status" class="status muted"
+        role="status" aria-live="polite">
+        Enter a domain name to start checking.
       </div>
     </section>
 
     <p class="note">
-      Results are indicative. A missing RDAP or DNS record does not prove that a domain is available.
-      Confirm availability with an accredited domain registrar.
+      DNS and RDAP results are indicative, not a guarantee of availability.
+      Confirm availability with a domain registrar before purchasing.
     </p>
   </main>
 </body>
