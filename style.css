@@ -70,6 +70,86 @@ select {
   cursor: pointer;
 }
 
+/* Character selector */
+.character-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.selector-hint {
+  margin: 0 0 8px;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.char-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid #343b49;
+  border-radius: 8px;
+  background: #0b0d12;
+  color: #e2e8f0;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.char-button:hover {
+  border-color: #60a5fa;
+}
+
+.char-button.selected {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.char-button:focus-visible,
+#scan-button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+/* Scan button */
+#scan-button {
+  width: 100%;
+  min-height: 46px;
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #2563eb;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#scan-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+#scan-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scan-progress {
+  min-height: 0;
+  margin-bottom: 12px;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Existing method/status messages */
 .method {
   margin: -5px 0 16px;
   color: #60a5fa;
@@ -88,6 +168,50 @@ select {
 .muted { color: #9ca3af; }
 .warn { color: #fbbf24; }
 
+/* Bulk scan results */
+.scan-results-container {
+  margin-top: 14px;
+  padding: 0;
+  background: #141821;
+  border: 1px solid #292f3b;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.scan-results:empty {
+  display: none;
+}
+
+.scan-results:not(:empty) {
+  padding: 14px;
+}
+
+.scan-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid #292f3b;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.scan-result-row:last-child {
+  border-bottom: none;
+}
+
+.scan-result-domain {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #e2e8f0;
+}
+
+.scan-result-emoji {
+  flex-shrink: 0;
+  font-size: 17px;
+}
+
 .note {
   margin-top: 24px;
   color: #737d8e;
@@ -102,5 +226,14 @@ select {
 
   .search-box {
     padding: 16px;
+  }
+
+  .char-button {
+    width: 35px;
+    height: 40px;
+  }
+
+  .scan-results:not(:empty) {
+    padding: 12px;
   }
 }
